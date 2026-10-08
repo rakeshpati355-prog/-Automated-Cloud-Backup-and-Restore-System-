@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CloudSafe Backup and Restore</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #eef3f8;
+      color: #1f2937;
+    }
+
+    header {
+      background: #173f5f;
+      color: white;
+      padding: 25px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin-bottom: 8px;
+    }
+
+    .container {
+      width: 94%;
+      max-width: 1150px;
+      margin: 25px auto;
+    }
+
+    .card {
+      background: white;
+      padding: 22px;
+      border-radius: 12px;
+      margin-bottom: 22px;
+      box-shadow: 0 4px 12px #00000018;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 15px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 7px;
+    }
+
+    input,
+    select,
+    button {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #ccd6e0;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+
+    input[type="file"] {
+      background: #f8fafc;
+    }
+
+    button {
+      border: none;
+      background: #1677c8;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #0d5fa3;
+    }
+
+    .green {
+      background: #16834d;
+    }
+
+    .green:hover {
+      background: #10683c;
+    }
+
+    .red {
+      background: #c0392b;
+    }
+
+    .red:hover {
+      background: #992d22;
+    }
+
+    .gray {
+      background: #64748b;
+    }
+
+    .gray:hover {
+      background: #475569;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 15px;
+      margin-bottom: 22px;
+    }
+
+    .stat-box {
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .stat-box h3 {
+      font-size: 30px;
+      margin-bottom: 8px;
+    }
+
+    .blue-bg {
+      background: #1677c8;
+    }
+
+    .green-bg {
+      background: #16834d;
+    }
+
+    .orange-bg {
+      background: #d97706;
+    }
+
+    .purple-bg {
+      background: #7c3aed;
+    }
+
+    .progress-container {
+      background: #e5e7eb;
+      height: 18px;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: #16834d;
+      transition: width 0.4s;
+    }
+
+    .backup-list {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      min-width: 850px;
+    }
+
+    th,
+    td {
+      padding: 13px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    th {
+      background: #173f5f;
+      color: white;
+    }
+
+    tr:hover {
+      background: #f1f5f9;
+    }
+
+    td button {
+      width: auto;
+      padding: 8px 12px;
+      margin: 2px;
+      font-size: 13px;
+    }
+
+    .status {
+      padding: 5px 9px;
+      border-radius: 15px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .completed {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .restored {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .message {
+      padding: 12px;
+      margin-top: 15px;
+      border-radius: 6px;
+      display: none;
+    }
+
+    .success-message {
+      color: #166534;
+      background: #dcfce7;
+    }
+
+    .error-message {
+      color: #991b1b;
+      background: #fee2e2;
+    }
+
+    .info-message {
+      color: #1e40af;
+      background: #dbeafe;
+    }
+
+    .file-preview {
+      margin-top: 15px;
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 6px;
+      line-height: 1.8;
+    }
+
+    .schedule-status {
+      color: #166534;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 30px;
+      color: #64748b;
+    }
+
+    @media (max-width: 650px) {
+      header h1 {
+        font-size: 24px;
+      }
+
+      .container {
+        width: 96%;
+      }
+
+      .card {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>CloudSafe Backup and Restore System</h1>
+    <p>Automated data protection and recovery dashboard</p>
+  </header>
+
+  <main class="container">
+
+    <section class="stats">
+      <div class="stat-box blue-bg">
+        <h3 id="totalBackups">0</h3>
+        <p>Total Backups</p>
+      </div>
+
+      <div class="stat-box green-bg">
+        <h3 id="successfulBackups">0</h3>
+        <p>Successful Backups</p>
+      </div>
+
+      <div class="stat-box orange-bg">
+        <h3 id="totalFiles">0</h3>
+        <p>Total Files</p>
+      </div>
+
+      <div class="stat-box purple-bg">
+        <h3 id="storageUsed">0 KB</h3>
+        <p>Storage Used</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Create Backup</h2>
+      <br>
+
+      <div class="grid">
+        <div>
+          <label for="backupName">Backup Name</label>
+          <input
+            type="text"
+            id="backupName"
+            placeholder="Example: College Project Backup"
+          >
+        </div>
+
+        <div>
+          <label for="backupType">Backup Type</label>
+          <select id="backupType">
+            <option value="Full Backup">Full Backup</option>
+            <option value="Incremental Backup">Incremental Backup</option>
+            <option value="Database Backup">Database Backup</option>
+            <option value="Document Backup">Document Backup</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="fileInput">Choose Files</label>
+          <input type="file" id="fileInput" multiple>
+        </div>
+
+        <div>
+          <label>&nbsp;</label>
+          <button class="green" onclick="createBackup()">
+            Create Backup
+          </button>
+        </div>
+      </div>
+
+      <div id="filePreview" class="file-preview">
+        No files selected.
+      </div>
+
+      <div id="backupMessage" class="message"></div>
+    </section>
+
+    <section class="card">
+      <h2>Automatic Backup Schedule</h2>
+      <br>
+
+      <div class="grid">
+        <div>
+          <label for="scheduleFrequency">Backup Frequency</label>
+          <select id="scheduleFrequency">
+            <option value="off">Disabled</option>
+            <option value="30">Every 30 seconds</option>
+            <option value="60">Every 1 minute</option>
+            <option value="300">Every 5 minutes</option>
+          </select>
+        </div>
+
+        <div>
+          <label>&nbsp;</label>
+          <button onclick="updateSchedule()">Update Schedule</button>
+        </div>
+
+        <div>
+          <label>&nbsp;</label>
+          <button class="gray" onclick="runAutomaticBackup()">
+            Run Backup Now
+          </button>
+        </div>
+      </div>
+
+      <p id="scheduleStatus" class="schedule-status">
+        Automatic backup is disabled.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Storage Usage</h2>
+      <p id="storageText">0 KB of 100 MB used</p>
+
+      <div class="progress-container">
+        <div id="storageProgress" class="progress-bar"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Backup History</h2>
+      <br>
+
+      <div class="grid">
+        <div>
+          <label for="searchInput">Search Backups</label>
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Search by name or type"
+            oninput="renderBackups()"
+          >
+        </div>
+
+        <div>
+          <label for="statusFilter">Filter Status</label>
+          <select id="statusFilter" onchange="renderBackups()">
+            <option value="all">All Statuses</option>
+            <option value="Completed">Completed</option>
+            <option value="Restored">Restored</option>
+          </select>
+        </div>
+
+        <div>
+          <label>&nbsp;</label>
+          <button class="red" onclick="clearAllBackups()">
+            Delete All Records
+          </button>
+        </div>
+      </div>
+
+      <div class="backup-list">
+        <table>
+          <thead>
+            <tr>
+              <th>Backup ID</th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Files</th>
+              <th>Size</th>
+              <th>Date and Time</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+
+          <tbody id="backupTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>System Information</h2>
+      <br>
+      <p><strong>Storage Mode:</strong> Browser cloud simulation</p>
+      <p><strong>Encryption:</strong> Simulated AES-256 encryption label</p>
+      <p><strong>Retention Policy:</strong> Backup records are saved locally</p>
+      <p><strong>Restore Mode:</strong> File download and backup metadata recovery</p>
+    </section>
+
+  </main>
+
+  <script>
+    let backups = JSON.parse(
+      localStorage.getItem("cloudSafeBackups") || "[]"
+    );
+
+    let scheduleTimer = null;
+
+    const fileInput = document.getElementById("fileInput");
+
+    fileInput.addEventListener("change", function () {
+      const files = Array.from(fileInput.files);
+
+      if (files.length === 0) {
+        document.getElementById("filePreview").textContent =
+          "No files selected.";
+        return;
+      }
+
+      document.getElementById("filePreview").innerHTML =
+        files.map(file => `
+          <div>
+            <strong>${escapeHTML(file.name)}</strong>
+            -
+            ${formatBytes(file.size)}
+          </div>
+        `).join("");
+    });
+
+    function escapeHTML(value) {
+      return value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function formatBytes(bytes) {
+      if (bytes === 0) return "0 Bytes";
+
+      const units = ["Bytes", "KB", "MB", "GB"];
+      const index = Math.floor(Math.log(bytes) / Math.log(1024));
+
+      return (
+        (bytes / Math.pow(1024, index)).toFixed(2) +
+        " " +
+        units[index]
+      );
+    }
+
+    function showMessage(text, type) {
+      const message = document.getElementById("backupMessage");
+
+      message.textContent = text;
+      message.className = "message " + type;
+      message.style.display = "block";
+
+      setTimeout(() => {
+        message.style.display = "none";
+      }, 5000);
+    }
+
+    function createBackup(automatic = false) {
+      const backupName =
+        document.getElementById("backupName").value.trim() ||
+        "Automatic Backup";
+
+      const backupType =
+        document.getElementById("backupType").value;
+
+      const selectedFiles = Array.from(fileInput.files);
+
+      if (selectedFiles.length === 0 && !automatic) {
+        showMessage(
+          "Please select at least one file.",
+          "error-message"
+        );
+        return;
+      }
+
+      const files = selectedFiles.length > 0
+        ? selectedFiles.map(file => ({
+            name: file.name,
+            size: file.size,
+            type: file.type || "Unknown",
+            content: ""
+          }))
+        : [
+            {
+              name: "automatic-system-snapshot.dat",
+              size: Math.floor(Math.random() * 900000) + 100000,
+              type: "System Snapshot",
+              content: "Automatic cloud backup snapshot"
+            }
+          ];
+
+      const totalSize = files.reduce(
+        (total, file) => total + file.size,
+        0
+      );
+
+      const backup = {
+        id: "BKP-" + Date.now(),
+        name: backupName,
+        type: backupType,
+        files: files,
+        totalSize: totalSize,
+        date: new Date().toLocaleString(),
+        status: "Completed",
+        encrypted: true
+      };
+
+      backups.unshift(backup);
+      saveBackups();
+      renderBackups();
+      updateStats();
+
+      if (!automatic) {
+        showMessage(
+          "Backup created successfully and encrypted for cloud storage.",
+          "success-message"
+        );
+
+        fileInput.value = "";
+        document.getElementById("filePreview").textContent =
+          "No files selected.";
+      }
+    }
+
+    function restoreBackup(id) {
+      const backup = backups.find(item => item.id === id);
+
+      if (!backup) {
+        showMessage(
+          "Backup record was not found.",
+          "error-message"
+        );
+        return;
+      }
+
+      const confirmation = confirm(
+        "Restore backup '" + backup.name + "'?"
+      );
+
+      if (!confirmation) return;
+
+      backup.status = "Restored";
+      backup.restoredAt = new Date().toLocaleString();
+
+      saveBackups();
+      renderBackups();
+      updateStats();
+
+      backup.files.forEach(file => {
+        const content =
+          file.content ||
+          `Restored file: ${file.name}\nBackup ID: ${backup.id}\nRestore time: ${new Date().toLocaleString()}`;
+
+        const blob = new Blob([content], {
+          type: "text/plain"
+        });
+
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "restored-" + file.name;
+        link.click();
+
+        setTimeout(() => {
+          URL.revokeObjectURL(link.href);
+        }, 1000);
+      });
+
+      showMessage(
+        "Backup restored. Restored files were downloaded.",
+        "success-message"
+      );
+    }
+
+    function downloadBackupReport(id) {
+      const backup = backups.find(item => item.id === id);
+
+      if (!backup) return;
+
+      const report = `
+CloudSafe Backup Report
+
+Backup ID: ${backup.id}
+Backup Name: ${backup.name}
+Backup Type: ${backup.type}
+Created: ${backup.date}
+Status: ${backup.status}
+Encrypted: ${backup.encrypted ? "Yes" : "No"}
+Total Size: ${formatBytes(backup.totalSize)}
+
+Files:
+${backup.files.map(file => "- " + file.name + " (" + formatBytes(file.size) + ")").join("\n")}
+      `;
+
+      const blob = new Blob([report], {
+        type: "text/plain"
+      });
+
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = backup.id + "-report.txt";
+      link.click();
+
+      setTimeout(() => {
+        URL.revokeObjectURL(link.href);
+      }, 1000);
+    }
+
+    function deleteBackup(id) {
+      const backup = backups.find(item => item.id === id);
+
+      if (!backup) return;
+
+      const confirmation = confirm(
+        "Delete backup record '" + backup.name + "'?"
+      );
+
+      if (!confirmation) return;
+
+      backups = backups.filter(item => item.id !== id);
+
+      saveBackups();
+      renderBackups();
+      updateStats();
+
+      showMessage(
+        "Backup record deleted successfully.",
+        "success-message"
+      );
+    }
+
+    function clearAllBackups() {
+      if (backups.length === 0) {
+        showMessage(
+          "There are no backup records to delete.",
+          "info-message"
+        );
+        return;
+      }
+
+      const confirmation = confirm(
+        "Delete all backup records?"
+      );
+
+      if (!confirmation) return;
+
+      backups = [];
+      saveBackups();
+      renderBackups();
+      updateStats();
+
+      showMessage(
+        "All backup records were deleted.",
+        "success-message"
+      );
+    }
+
+    function renderBackups() {
+      const body = document.getElementById("backupTableBody");
+      const searchValue =
+        document.getElementById("searchInput").value.toLowerCase();
+
+      const statusValue =
+        document.getElementById("statusFilter").value;
+
+      const filtered = backups.filter(backup => {
+        const matchesSearch =
+          backup.name.toLowerCase().includes(searchValue) ||
+          backup.type.toLowerCase().includes(searchValue) ||
+          backup.id.toLowerCase().includes(searchValue);
+
+        const matchesStatus =
+          statusValue === "all" ||
+          backup.status === statusValue;
+
+        return matchesSearch && matchesStatus;
+      });
+
+      if (filtered.length === 0) {
+        body.innerHTML = `
+          <tr>
+            <td colspan="8" class="empty">
+              No backup records found.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      body.innerHTML = filtered.map(backup => `
+        <tr>
+          <td>${backup.id}</td>
+          <td>${escapeHTML(backup.name)}</td>
+          <td>${backup.type}</td>
+          <td>${backup.files.length}</td>
+          <td>${formatBytes(backup.totalSize)}</td>
+          <td>${backup.date}</td>
+          <td>
+            <span class="status ${
+              backup.status === "Restored"
+                ? "restored"
+                : "completed"
+            }">
+              ${backup.status}
+            </span>
+          </td>
+          <td>
+            <button onclick="restoreBackup('${backup.id}')">
+              Restore
+            </button>
+            <button
+              class="gray"
+              onclick="downloadBackupReport('${backup.id}')">
+              Report
+            </button>
+            <button
+              class="red"
+              onclick="deleteBackup('${backup.id}')">
+              Delete
+            </button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    function updateStats() {
+      const totalFiles = backups.reduce(
+        (total, backup) => total + backup.files.length,
+        0
+      );
+
+      const storage = backups.reduce(
+        (total, backup) => total + backup.totalSize,
+        0
+      );
+
+      const successful = backups.filter(
+        backup => backup.status === "Completed" ||
+                  backup.status === "Restored"
+      ).length;
+
+      document.getElementById("totalBackups").textContent =
+        backups.length;
+
+      document.getElementById("successfulBackups").textContent =
+        successful;
+
+      document.getElementById("totalFiles").textContent =
+        totalFiles;
+
+      document.getElementById("storageUsed").textContent =
+        formatBytes(storage);
+
+      document.getElementById("storageText").textContent =
+        formatBytes(storage) + " of 100 MB used";
+
+      const percentage = Math.min(
+        (storage / (100 * 1024 * 1024)) * 100,
+        100
+      );
+
+      document.getElementById("storageProgress").style.width =
+        percentage + "%";
+    }
+
+    function saveBackups() {
+      localStorage.setItem(
+        "cloudSafeBackups",
+        JSON.stringify(backups)
+      );
+    }
+
+    function updateSchedule() {
+      const frequency =
+        document.getElementById("scheduleFrequency").value;
+
+      if (scheduleTimer) {
+        clearInterval(scheduleTimer);
+        scheduleTimer = null;
+      }
+
+      if (frequency === "off") {
+        document.getElementById("scheduleStatus").textContent =
+          "Automatic backup is disabled.";
+        return;
+      }
+
+      scheduleTimer = setInterval(() => {
+        runAutomaticBackup();
+      }, Number(frequency) * 1000);
+
+      document.getElementById("scheduleStatus").textContent =
+        "Automatic backup is active. Next backup will run automatically.";
+    }
+
+    function runAutomaticBackup() {
+      createBackup(true);
+
+      document.getElementById("scheduleStatus").textContent =
+        "Automatic backup completed at " +
+        new Date().toLocaleTimeString();
+    }
+
+    renderBackups();
+    updateStats();
+  </script>
+</body>
+</html>
